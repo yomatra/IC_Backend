@@ -18,6 +18,14 @@ STATUSES = [
 ]
 
 
+SEVERITY_ICONS = {
+    "LOW": "🟢",
+    "MEDIUM": "🟡",
+    "HIGH": "🟠",
+    "CRITICAL": "🔴"
+}
+
+
 st.title("Incident Tickets")
 
 st.caption(
@@ -25,26 +33,30 @@ st.caption(
 )
 
 
+# --------------------------------------------------
+# LOAD INCIDENTS
+# --------------------------------------------------
+
 try:
     incidents = get_incidents()
 
 except Exception as exc:
-
     st.error(
         f"API unavailable: {exc}"
     )
-
     st.stop()
 
 
 if not incidents:
-
     st.info(
         "No tickets available."
     )
-
     st.stop()
 
+
+# --------------------------------------------------
+# INCIDENT MAP
+# --------------------------------------------------
 
 incident_map = {
     incident["id"]: incident
@@ -52,17 +64,42 @@ incident_map = {
 }
 
 
+def format_ticket(incident_id):
+
+    incident = incident_map[incident_id]
+
+    severity = incident.get(
+        "severity",
+        "UNKNOWN"
+    )
+
+    icon = SEVERITY_ICONS.get(
+        severity,
+        "⚪"
+    )
+
+    return (
+        f"{icon} "
+        f"{incident_id} — "
+        f"{incident['name']} — "
+        f"{severity}"
+    )
+
+
+# --------------------------------------------------
+# SELECT TICKET
+# --------------------------------------------------
+
 selected_id = st.selectbox(
     "Select ticket",
-    options=list(
-        incident_map.keys()
-    ),
-    format_func=lambda incident_id: (
-        f"{incident_id} — "
-        f"{incident_map[incident_id]['name']}"
-    )
+    options=list(incident_map.keys()),
+    format_func=format_ticket
 )
 
+
+# --------------------------------------------------
+# LOAD SINGLE TICKET
+# --------------------------------------------------
 
 try:
     ticket = get_incident(
@@ -70,20 +107,18 @@ try:
     )
 
 except Exception as exc:
-
     st.error(
         f"Could not load ticket: {exc}"
     )
-
     st.stop()
 
 
 st.divider()
 
 
-# -----------------------
-# TICKET HEADER
-# -----------------------
+# --------------------------------------------------
+# HEADER
+# --------------------------------------------------
 
 st.subheader(
     ticket["name"]
@@ -94,12 +129,25 @@ st.caption(
 )
 
 
+severity = ticket["severity"]
+
+severity_display = {
+    "LOW": "🟢 LOW",
+    "MEDIUM": "🟡 MEDIUM",
+    "HIGH": "🟠 HIGH",
+    "CRITICAL": "🔴 CRITICAL"
+}.get(
+    severity,
+    "⚪ UNKNOWN"
+)
+
+
 col1, col2, col3 = st.columns(3)
 
 
 col1.metric(
     "Severity",
-    ticket["severity"]
+    severity_display
 )
 
 col2.metric(
@@ -116,9 +164,9 @@ col3.metric(
 st.divider()
 
 
-# -----------------------
+# --------------------------------------------------
 # DETAILS
-# -----------------------
+# --------------------------------------------------
 
 left, right = st.columns(2)
 
@@ -170,9 +218,9 @@ with right:
 st.divider()
 
 
-# -----------------------
-# STATUS
-# -----------------------
+# --------------------------------------------------
+# STATUS UPDATE
+# --------------------------------------------------
 
 st.subheader(
     "Update Status"
@@ -223,9 +271,9 @@ if st.button(
 st.divider()
 
 
-# -----------------------
-# RAW JSON-LD
-# -----------------------
+# --------------------------------------------------
+# RAW JSON
+# --------------------------------------------------
 
 with st.expander(
     "Show JSON-LD report"
